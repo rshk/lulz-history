@@ -1,0 +1,20 @@
+## Exclude backup files
+*~
+
+## Common Python stuff
+*.py[co]
+*.egg
+*.egg-info
+/dist
+/build
+
+## Exclude virtualenvs
+/.venv*
+
+## As it contains passwords and stuff..
+lulz.cfg
+
+## Emacs
+\#*\#
+.\#*
+/.ropeproject
