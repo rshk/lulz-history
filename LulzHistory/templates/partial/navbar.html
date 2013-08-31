@@ -1,0 +1,22 @@
+<div class="navbar navbar-inverse navbar-static-top">
+    <div class="navbar-inner">
+        <a class="brand" href="/">
+            <i class="icon-camera"></i> LuLz History
+        </a>
+        <ul class="nav">
+            <!-- <li><a href="/map-editor/">Edit GeoJSON files</a></li> -->
+            <!-- <li><a href="#">Create Multi-layer Map</a></li> -->
+        </ul>
+        <ul class="nav pull-right">
+            {% if not user.authenticated %}
+            <li><a href="/login/">Login</a></li>
+            {% else %}
+            <li><a href="/">
+                <i class="icon-github"></i>
+                {{ user.name }} ({{ user.login }})
+            </a></li>
+            <li><a href="/logout/">Logout</a></li>
+            {% endif %}
+        </ul>
+    </div>
+</div>

@@ -1,0 +1,33 @@
+{% extends "app.html" %}
+
+{% block page_content %}
+<div class="container">
+
+<h1>Lulz'd History for {{ repo_name }}</h1>
+
+<div>
+  <strong>Branch:</strong> {{ current_branch }}
+</div>
+
+{% for commit in commits %}
+<div class="commit-info">
+  <div class="pic">
+    <img src="{{ commit.author.avatar_url }}"/>
+  </div>
+  <div class="sha">
+    <a href="{{ commit.html_url }}">{{ commit.sha[:11] }}</a>
+  </div>
+  <div></div>
+  <div>{{ commit.commit.message }}</div>
+  <div>
+    <a href="{{ commit.author.html_url }}">{{ commit.author.login }}</a>
+    authored on {{ commit.commit.author.date }}
+  </div>
+
+{#{ commit }#}
+</div>
+{% endfor %}
+
+
+</div>
+{% endblock %}

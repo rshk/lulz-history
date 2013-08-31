@@ -1,0 +1,50 @@
+{% extends "map-editor/base.html" %}
+
+{% block page_content %}
+<div class="container">
+
+<h1>{{ title }}</h1>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Owner</th>
+            <th>Language</th>
+            <th>Can push?</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for repo in repos %}
+        <tr>
+            <th>
+                <a href="{{ url_for('map_editor', owner=repo.owner.login, repo=repo.name) }}">{{ repo.full_name }}</a>
+            </th>
+            <td>{{ repo.description }}</td>
+            <td><a href="{{ repo.owner.html_url }}">{{ repo.owner.login }}</a></td>
+            <td>{{ repo.language or "" }}</td>
+            <td>{{ repo.permissions.push and "Yes" or "No" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<h2>Organizations</h2>
+
+<strong>TODO</strong> List organizations if this is the user's own page..
+
+{#<ul class="repos-list">
+{% for repo in repos %}
+    <li>
+        <strong><a href="{{ url_for('map_editor', owner=repo.owner.login, repo=repo.name) }}">{{ repo.full_name }}</a></strong>
+        {% if repo.description %}
+            &mdash; {{ repo.description }}
+        {% endif %}
+    </li>
+{% endfor %}
+</ul>#}
+
+</div>
+{% endblock %}
