@@ -11,8 +11,10 @@
 
 {% for commit in commits %}
 <div class="commit-info">
-  <div class="pic">
-    <img src="{{ commit.author.avatar_url }}"/>
+  <div class="pic {% if commit.is_lulz %}lulz{% else %}no-lulz{% endif %}">
+    <a href="{{ commit.pic }}" target="_blank">
+      <img src="{{ commit.pic }}"/>
+    </a>
   </div>
   <div class="sha">
     <a href="{{ commit.html_url }}">{{ commit.sha[:11] }}</a>

@@ -18,19 +18,21 @@
 Views
 """
 
-import json, base64
+import base64
+import json
+import urllib
 
 from flask import render_template, session
 from flask.ext import restful
 import requests
-
 from werkzeug.contrib.cache import SimpleCache
 
 from . import app
+from .github import request
 from .auth import github, require_github
 
 
-cache = SimpleCache()
+cache = SimpleCache(default_timeout=120)
 
 
 @app.context_processor
@@ -56,6 +58,10 @@ def index():
 
 
 def dig_down_request(do_req, url):
+    """
+    Continue following the "next" link in order to retrieve
+    **all** the results from a paginated request.
+    """
     while True:
         resp = do_req(url)
         yield resp
@@ -75,70 +81,96 @@ def dig_down_merge(do_req, url):
     return results
 
 
-@app.route('/repo/')
+def request_all(url, params=None):
+    response = request('GET', url, params=params)
+    for item in response.json():
+        yield item
+    while 'next' in response.links:
+        response = request('GET', response.links['next']['url'])
+        for item in response.json():
+            yield item
+
+
 @app.route('/repo/<owner>/')
-@require_github
-def repo_index(owner=None, repo=None, branch=None):
-
-    if repo is None:
-        ## List repositories (optionally filtering on owner)
-        return list_repositories(owner)
-
-    if branch is None:
-        branch = 'master'  # todo: use repo default instead
-
-    ## Now return a view showing this repo history, with lulz
-    pass
-
-
-def list_repositories(owner=None):
-    """
-    List repositories for a given user/organization
-    """
-
-    ## todo: fetch repos for organizations too..
-
-    if owner is None:
-        title = "Your repositories"
-        url = '/user/repos?sort=updated&direction=desc'
-
+def repo_index(owner):
+    title = u"Repositories for {}".format(owner)
+    url = '/users/{}/repos'.format(owner)
+    params = {
+        'sort': 'updated',
+        'direction': 'desc',
+    }
+    cache_key = '/users/{}/repos'.format(owner)
+    data = cache.get(cache_key)
+    if data:
+        repos = data
     else:
-        title = "Repositories for {}".format(owner)
-        url = '/users/{}/repos?sort=updated&direction=desc'.format(owner)
-
-    auth = github.get_session(token=session['token'])
-    repos = dig_down_merge(auth.get, url)
+        repos = list(request_all(url, params=params))
+        cache.set(cache_key, repos)
     return render_template("repos-index.html", repos=repos, title=title)
 
 
 @app.route('/repo/<owner>/<repo>/')
 @app.route('/repo/<owner>/<repo>/<branch>/')
-@require_github
 def lulz_history(owner=None, repo=None, branch=None):
     """
     Show the lulz'd history for a given repository/branch
     """
-    if branch is None:
-        branch = 'master'
-    auth = github.get_session(token=session['token'])
 
-    commits_cache_key = 'commits/{}/{}/{}'.format(owner, repo, branch)
-    branches_cache_key = 'branches/{}/{}'.format(owner, repo)
+    ## Retrieve commits history
+    commits_cache_key = '/repos/{owner}/{repo}/commits?sha={branch}'.format(
+        owner=owner, repo=repo, branch=branch)
+    data = cache.get(commits_cache_key)
+    if data is not None:
+        commits = data
+    else:
+        url = '/repos/{owner}/{repo}/commits'.format(
+            owner=owner, repo=repo)
+        params = {'per_page': 100}
+        if branch is not None:
+            args['sha'] = branch
+        commits = list(request_all(url, params=params))
+        cache.set(commits_cache_key, commits)
 
-    ## todo: figure out how to get commits for a specific branch!
-    commits = cache.get(commits_cache_key)
-    if commits is None:
-        commits = dig_down_merge(
-            auth.get,
-            '/repos/{owner}/{repo}/commits?ref={branch}'.format(
-                owner=owner, repo=repo, branch=branch))
-        cache.set(commits_cache_key, commits, timeout=120)
+    ## Retrieve list of branches
+    branches_cache_key = '/repos/{owner}/{repo}/branches'.format(
+        owner=owner, repo=repo)
+    data = cache.get(branches_cache_key)
+    if data is not None:
+        branches = data
+    else:
+        url = '/repos/{owner}/{repo}/branches'.format(owner=owner, repo=repo)
+        branches = list(request_all(url))
+        cache.set(branches_cache_key, branches)
 
-    branches = cache.get(branches_cache_key)
-    if branches is None:
-        branches = dig_down_merge(
-            auth.get, '/repos/{}/{}/branches'.format(owner, repo))
-        cache.set(branches_cache_key, branches, timeout=120)
+    ## Retrieve list of available lulz pictures
+    lulz_pics_cache_key = '/repos/{owner}/{repo}/contents?ref=lulz-pics'\
+                          ''.format(owner=owner, repo=repo)
+    data = cache.get(lulz_pics_cache_key)
+    if data is not None:
+        lulz_pics = data
+    else:
+        url = '/repos/{owner}/{repo}/contents?ref=lulz-pics'\
+              ''.format(owner=owner, repo=repo)
+        lulz_pics = list(request_all(url))
+        cache.set(lulz_pics_cache_key, lulz_pics)
+
+    lulz_pics_dict = {}
+    for pic in lulz_pics:
+        if pic['type'] == 'file':
+            #lulz_pics_dict[pic['name']] = pic['html_url']
+            lulz_pics_dict[pic['name']] = \
+                "https://raw.github.com/{owner}/{repo}/lulz-pics/{pic}".format(
+                    owner=owner, repo=repo, pic=pic['name'])
+
+    for commit in commits:
+        sha_short = commit['sha'][:11]
+        pic_name = '{}.jpg'.format(sha_short)
+        if pic_name in lulz_pics_dict:
+            commit['pic'] = lulz_pics_dict[pic_name]
+            commit['is_lulz'] = True
+        else:
+            commit['pic'] = commit['author']['avatar_url']
+            commit['is_lulz'] = False
 
     return render_template(
         'lulz-history.html',
