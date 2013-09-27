@@ -1,4 +1,4 @@
-// Lulz History
+/* Lulz History */
 
 .navbar .brand,
 .navbar .brand i {
@@ -23,36 +23,5 @@
 }
 
 .commit-info {
-    margin: 0 0 5px;
-    padding: 3px;
-    border: solid 1px #888;
-    height: 170px;
-}
-.commit-info .pic {
-    float: left;
-    height: 160px;
-    width: 212px;
-    background: #888;
-    text-align: center;
-    line-height: 160px;
-    margin: 5px 10px 5px 5px;
-}
-.commit-info .pic {
-    float: left;
-}
-.commit-info .pic img {
-    height: 80px;
-}
-.commit-info .pic.no-lulz img {
-    border-radius: 20px;
-}
-.commit-info .pic.lulz img {
-    height: 160px;
-}
-.commit-info .sha {
-    float: right;
-    display: inline-block;
-    padding: 3px 10px;
-    border: solid 1px #888;
-    border-radius: 10px;
+    margin-bottom: 5px;
 }
