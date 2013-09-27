@@ -21,18 +21,39 @@ Views
 import base64
 import json
 import urllib
+from functools import wraps
 
-from flask import render_template, session
-from flask.ext import restful
-import requests
+from flask import render_template, session, request
 from werkzeug.contrib.cache import SimpleCache
 
 from . import app
 from .github import request
-from .auth import github, require_github
+from .auth import github
 
 
 cache = SimpleCache(default_timeout=120)
+
+
+def cached(timeout=5 * 60, key=None):
+    """Decorator for caching function return values"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if hasattr(key, '__call__'):
+                cache_key = key(*args, **kwargs)
+            elif key is not None:
+                cache_key = key
+            else:
+                ## todo: generate from args/kwargs?
+                raise ValueError("Unspecified cache key")
+            rv = cache.get(cache_key)
+            if rv is not None:
+                return rv
+            rv = f(*args, **kwargs)
+            cache.set(cache_key, rv, timeout=timeout)
+            return rv
+        return decorated_function
+    return decorator
 
 
 @app.context_processor
@@ -116,43 +137,39 @@ def lulz_history(owner=None, repo=None, branch=None):
     Show the lulz'd history for a given repository/branch
     """
 
-    ## Retrieve commits history
-    commits_cache_key = '/repos/{owner}/{repo}/commits?sha={branch}'.format(
-        owner=owner, repo=repo, branch=branch)
-    data = cache.get(commits_cache_key)
-    if data is not None:
-        commits = data
-    else:
+    @cached(5*60, '/repos/{owner}/{repo}/commits?sha={branch}')
+    def get_commits(owner, repo, branch):
         url = '/repos/{owner}/{repo}/commits'.format(
             owner=owner, repo=repo)
+
+        ## todo: we need to paginate, as commits can be quite a lot..
+        ## (right now we're only showing 100 commits..)
         params = {'per_page': 100}
+
         if branch is not None:
-            args['sha'] = branch
-        commits = list(request_all(url, params=params))
-        cache.set(commits_cache_key, commits)
+            params['sha'] = branch
 
-    ## Retrieve list of branches
-    branches_cache_key = '/repos/{owner}/{repo}/branches'.format(
-        owner=owner, repo=repo)
-    data = cache.get(branches_cache_key)
-    if data is not None:
-        branches = data
-    else:
+        return request('GET', url, params=params).json()
+
+    commits = get_commits(owner=owner, repo=repo, branch=branch)
+
+    @cached(5*60, '/repos/{owner}/{repo}/branches')
+    def list_branches(owner, repo):
         url = '/repos/{owner}/{repo}/branches'.format(owner=owner, repo=repo)
-        branches = list(request_all(url))
-        cache.set(branches_cache_key, branches)
+        return list(request_all(url))
 
-    ## Retrieve list of available lulz pictures
-    lulz_pics_cache_key = '/repos/{owner}/{repo}/contents?ref=lulz-pics'\
-                          ''.format(owner=owner, repo=repo)
-    data = cache.get(lulz_pics_cache_key)
-    if data is not None:
-        lulz_pics = data
-    else:
+    branches = list_branches(owner=owner, repo=repo)
+
+    ## todo: we should look for pics in the committer's repo
+    ## named "lulz-pics", master branch, all subfolders..
+
+    @cached(5*60, '/repos/{owner}/{repo}/contents?ref=lulz-pics')
+    def get_lulz_pics(owner, repo):
         url = '/repos/{owner}/{repo}/contents?ref=lulz-pics'\
               ''.format(owner=owner, repo=repo)
-        lulz_pics = list(request_all(url))
-        cache.set(lulz_pics_cache_key, lulz_pics)
+        return list(request_all(url))
+
+    lulz_pics = get_lulz_pics(owner=owner, repo=repo)
 
     lulz_pics_dict = {}
     for pic in lulz_pics:
