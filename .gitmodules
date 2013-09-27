@@ -1,0 +1,3 @@
+[submodule "LulzHistory/static/bootstrap"]
+	path = LulzHistory/static/bootstrap
+	url = https://github.com/rshk/bootstrap-awesome.git
