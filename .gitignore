@@ -18,3 +18,8 @@ lulz.cfg
 \#*\#
 .\#*
 /.ropeproject
+
+## Testing
+/.cache
+/.coverage
+/.tox
