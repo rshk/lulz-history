@@ -2,31 +2,79 @@
 Test for the utility functions used in the project
 """
 
+import time
+
 import pytest
+import mock
 
 
 def test_function_cache():
-    ## todo: test the @cached decorator used in the views
+    ## test the @cached decorator used in the views
+
     from werkzeug.contrib.cache import SimpleCache
     from functools import partial
     from LulzHistory.utils import cached as cached_decorator
     cache = SimpleCache(default_timeout=120)
     cached = partial(cached_decorator, cache)
 
+    calls = {'myfunc': 0}
+
     @cached(30, 'myfunc/{0}')
     def myfunc(arg):
+        calls['myfunc'] += 1
         if 0 <= arg <= 5:
             return "Retval #{0}".format(arg)
         raise ValueError("Invalid argument")
 
     assert myfunc(0) == 'Retval #0'
+    assert calls['myfunc'] == 1
     assert myfunc(1) == 'Retval #1'
+    assert calls['myfunc'] == 2
     assert myfunc(2) == 'Retval #2'
+    assert calls['myfunc'] == 3
+
     assert myfunc(1) == 'Retval #1'  # Should *not* call myfunc
+    assert calls['myfunc'] == 3
+
+    ## Exceptions should pass through directly
     with pytest.raises(Exception):
         myfunc(200)
+    assert calls['myfunc'] == 4
+
+    ## Exceptions are not cached
+    with pytest.raises(Exception):
+        myfunc(200)
+    assert calls['myfunc'] == 5
+
     assert myfunc(2) == 'Retval #2'  # Should *not* call myfunc
+    assert calls['myfunc'] == 5
+
     assert myfunc(3) == 'Retval #3'
+    assert calls['myfunc'] == 6
+
+    ## Test cache expiration.
+    ##----------------------------------------
+    ## We use mock to fake the date returned by the time.time()
+    ## imported in werkzeug.contrib.cache
+
+    now = time.time()
+
+    def fake_date(delta=0):
+        return mock.patch(
+            'werkzeug.contrib.cache.time',
+            return_value=(now + delta))
+
+    with fake_date(0):
+        myfunc(4)
+        assert calls['myfunc'] == 7
+
+    with fake_date(10):
+        myfunc(4)
+        assert calls['myfunc'] == 7
+
+    with fake_date(60):
+        myfunc(4)
+        assert calls['myfunc'] == 8
 
 
 def test_image_filename_match():
