@@ -3,58 +3,64 @@
 
 <div class="intro-header">
     <div class="container">
-        <h1>lolcommits + GitHub == more lulz!</h1>
-        <p>Navigate project history through contributor's faces!</p>
+	<h1>lolcommits + GitHub == more lulz!</h1>
+	<p>Navigate project history through contributor's faces!</p>
     </div>
 </div>
 
 <div class="container">
+  <div class="row-fluid">
+    <div class="span8">
+      <h2>What's this?</h2>
+      <p>Ever wanted to see the faces of the people who wrote the software
+	you're using and trusting every day? Now you can easily, thanks to
+	<a href="http://mroth.github.io/lolcommits/">lolcommits</a>,
+	<a href="http://github.com">GitHub</a> and
+	<a href="https://github.com/rshk/lulz-history">this app</a>!
+      </p>
 
-    <div class="hero-unit">
-
-        <h2>What's this?</h2>
-
-        <p>
-            You can <a href="/login/">login using GitHub</a> and explore projects
-            history with <a href="http://mroth.github.io/lolcommits/">lolcommits</a>
-	    images.
-        </p>
-
-	<h2>How do I lulz-enable my repo?</h2>
-
-	<ol>
-	  <li>Install lolcommits and enable it on your repo</li>
-	  <li>Commit your lolcommits pictures (you find them in ~/.lolcommits)
-	      in a branch named "<code>lulz-pics</code>"</li>
-	  <li>There isn't a 3, since you're done. Congrats!</li>
-	</ol>
-
-        <div style="text-align:center;margin:25px 0;">
-            <a href="/map-editor/" class="btn btn-large btn-primary">
-                <i class="icon-camera"></i>
-                Get started now!
-            </a>
-            <a href="https://github.com/rshk/lulz-history" class="btn btn-large">
-                <i class="icon-github"></i>
-                Fork on GitHub!
-            </a>
-            <!-- <a href="#" class="btn btn-large btn-success">
-                View the gh-map documentation
-            </a> -->
-        </div>
-
+      <h2>How do I submit my pictures?</h2>
+      <p>
+	Just create a repository named <code>my-lulz-pics</code> and commit
+	your <code>~/.lolcommits</code> directory into it.
+      </p>
+      <p>
+	Lulz-history will look for pictures in all the subfolders of the
+	<code>my-lulz-pics</code> repository owned by the commit author.
+      </p>
+      <p>
+	You can also put pictures in a branch named <code>lulz-pics</code>,
+	in the same repository as the code, but I opted out from that solution
+	as it would require more work to set up and forces to keep around / merge
+	all the pictures from all the projects contributors.
+      </p>
     </div>
-
-    <hr>
-
-    <p style="color:#888;font-size:80%;">
-    &copy; 2013 Samuele Santi - Under Apache License Version 2.0<br>
-    This application is <strong>not</strong> in any way affiliated with
-    <a href="https://github.com">GitHub</a>,
-    <a href="http://mroth.github.io/lolcommits/">lolcommits</a> or the
-    <a href="http://en.wikipedia.org/wiki/Galactic_Empire_%28Star_Wars%29">Empire</a>.
-    May the schwartz be with you.
-    </p>
-
+    <div class="span4 well" style="text-align:center;">
+      <h2>Show me some lulz!</h2>
+      <p>Just tell me the name of the GitHub repository you want to explore..</p>
+      <form action="goto" method="GET" class="form">
+	<div class="input-append">
+	  <input type="text" name="repo" placeholder="owner/repo" />
+	  <button type="submit" class="btn btn-primary">Go!</button>
+	</div>
+      </form>
+      <p>..or, append <code>repo/<em>owner</em>/<em>name</em></code> at the end
+	of the application URL.</p>
+    </div>
+  </div>
 </div>
+
+  <hr>
+
+<div class="container">
+    <p style="color:#888;font-size:80%;">
+      &copy; 2013 Samuele Santi - Under Apache License Version 2.0 - <a href="https://github.com/rshk/lulz-history">Fork me on GitHub</a><br>
+      This application is <strong>not</strong> in any way affiliated with
+      <a href="https://github.com">GitHub</a>,
+      <a href="http://mroth.github.io/lolcommits/">lolcommits</a> or the
+      <a href="http://en.wikipedia.org/wiki/Galactic_Empire_%28Star_Wars%29">Empire</a>.
+      May the schwartz be with you.
+    </p>
+</div>
+
 {% endblock %}
