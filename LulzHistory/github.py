@@ -55,7 +55,8 @@ def request(method, url, params=None, **kwargs):
     if isinstance(params, basestring):
         ## If params is bytes -> we need to split
         parsed = urlparse.parse_qs(params)
-        params = {k: v[0] for k, v in parsed.iteritems()}
+        #params = {k: v[0] for k, v in parsed.iteritems()}
+        params = dict((k, v[0]) for k, v in parsed.iteritems())  # <2.7
     params['client_id'] = CLIENT_ID
     params['client_secret'] = CLIENT_SECRET
 
