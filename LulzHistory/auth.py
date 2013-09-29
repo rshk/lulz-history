@@ -1,4 +1,4 @@
-##==============================================================================
+##============================================================================
 ## Copyright 2013 Samuele Santi
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
-##==============================================================================
+##============================================================================
 
 """
 Authentication views and stuff
@@ -46,7 +46,7 @@ def require_github(func):
     ## todo: catch authentication exceptions -> redirect to login page
     @wraps(func)
     def wrapped(*a, **kw):
-        if session.has_key('token'):
+        if 'token' in session:
             return func(*a, **kw)
         else:
             return redirect(url_for('login'))  # todo: add ?next=<current_url>
@@ -56,7 +56,7 @@ def require_github(func):
 @app.route('/login/')
 def login():
     redirect_uri = url_for('authorized', next=request.args.get('next') or
-        request.referrer or None, _external=True)
+                           request.referrer or None, _external=True)
     # More scopes http://developer.github.com/v3/oauth/#scopes
     params = {'redirect_uri': redirect_uri, 'scope': GITHUB_SCOPE}
     #print(github.get_authorize_url(**params))
