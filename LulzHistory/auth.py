@@ -91,23 +91,3 @@ def authorized():
     session['token'] = auth.access_token
 
     return redirect(url_for('index'))
-
-
-# @app.route('/about/')
-# @require_github
-# def about():
-#     auth = github.get_session(token=session['token'])
-#     resp = auth.get('/user')
-#     if resp.status_code == 200:
-#         user = resp.json()
-#  #return render_template('about.html', user = user)
-#     resp = make_response(
-#         json.dumps(user), 200,
-#         {'Content-type': 'application/json'})
-#     return resp
-
-
-# @app.route('/about/token/')
-# @require_github
-# def get_token():
-#     return session.get('token')
