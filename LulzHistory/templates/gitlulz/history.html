@@ -1,0 +1,60 @@
+{% extends "app.html" %}
+
+{% block page_content %}
+<div class="container">
+
+<h1>Lulz'd History for {{ repo_name }}</h1>
+
+<div class="alert alert-info">
+  <strong>Repository:</strong>
+
+  <a href="https://github.com/{{ repo_name }}" target="_blank">{{ repo_name }}</a>
+  &mdash;
+
+  <strong>Branch:</strong>
+
+  <div class="btn-group">
+    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+      {{ current_branch or '<em>default</em>'|safe }}
+      <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+      {% for branch in branches %}
+	<li><a href="{{ url_for('lulz_history', owner=owner, repo=repo, branch=branch) }}">
+	    {{ branch }}</a></li>
+      {% endfor %}
+    </ul>
+    </div>
+</div>
+
+<div id="commits-wrapper">
+  <div class="alert alert-error">
+    <strong>Error</strong> We need JavaScript to load the page contents.. :(
+  </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script type="text/javascript">
+    var inner_page_url = "{{ url_for('history_commits', owner=owner, repo=repo, branch=branch) }}";
+    var crunch_message = '<div class="loading-message">' +
+        '<i class="icon-spinner icon-spin icon-large"></i> ' +
+        'Crunching data just for you!</div>';
+    $(function(){
+        var commits_wrapper = $('#commits-wrapper')
+        commits_wrapper.html(crunch_message);
+        commits_wrapper.load(inner_page_url, function(resp, status, xhr) {
+            if (status == 'error') {
+                commits_wrapper.html(
+                    '<div class="alert alert-error">' +
+                    'An error occurred while loading page.' +
+                    '(error ' + xhr.status + ': ' + xhr.statusText + ')' +
+                    '</div>');
+            }
+        });
+    });
+  </script>
+{% endblock %}

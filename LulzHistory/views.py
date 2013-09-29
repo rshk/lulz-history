@@ -200,12 +200,37 @@ def get_repo_pics(owner, repo):
 @app.route('/repo/<owner>/<repo>/<branch>/')
 def lulz_history(owner=None, repo=None, branch=None):
     """
-    Show the lulz'd history for a given repository/branch
+    The actual page showing the history.
+
+    No, wait, this is only a wrapper for the "real thing",
+    that is obtained via ajax (as it may take a long time
+    generating, and we want to tell the user we're doing
+    stuff in background...)
     """
 
+    branches = list_branches(owner=owner, repo=repo)
+    branches = sorted(branch['name'] for branch in branches)
+    return render_template(
+        'gitlulz/history.html',
+        repo_name="{0}/{1}".format(owner, repo),
+        owner=owner, repo=repo, branch=branch,
+        current_branch=branch,
+        branches=branches)
+
+
+@app.route('/repo/<owner>/<repo>/commits')
+@app.route('/repo/<owner>/<repo>/<branch>/commits')
+def history_commits(owner=None, repo=None, branch=None):
+    """
+    Returns the "inner" part of the history.
+
+    Since page generation may take quite a long time,
+    we load a blank page with a "loading..." indicator,
+    then we require this page via an ajax call.
+    """
     commits = get_commits(owner=owner, repo=repo, branch=branch)
     authors = set(c['author']['login'] for c in commits if c['author'])
-    branches = list_branches(owner=owner, repo=repo)
+
     all_pics = {}
 
     for author in authors:
@@ -230,8 +255,5 @@ def lulz_history(owner=None, repo=None, branch=None):
             commit['is_lulz'] = False
 
     return render_template(
-        'lulz-history.html',
-        commits=commits,
-        repo_name="{0}/{1}".format(owner, repo),
-        current_branch=branch,
-        branches=branches)
+        'gitlulz/history-inner.html',
+        commits=commits)

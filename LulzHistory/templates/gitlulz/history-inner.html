@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head></head><body>
+
+{% for commit in commits %}
+  <div class="row row-fluid commit-info">
+    <div class="span3">
+      {% if commit.is_lulz %}
+        <a href="{{ commit.pic }}" target="_blank">
+          <img src="{{ commit.pic }}" class="img-polaroid" style="max-width:100%;" />
+        </a>
+      {% else %}
+        <img src="{{ commit.pic }}" class="img-polaroid pull-right" />
+      {% endif %}
+    </div>
+    <div class="span9">
+      <div class="popover right popover-static">
+        <div class="arrow"></div>
+        <div class="popover-title">
+  	    <small>
+	      <a href="{{ commit.author.html_url }}">{{ commit.author.login }}</a>
+  	      authored on {{ commit.commit.author.date }}
+	    </small>
+        </div>
+        <div class="popover-content" style="min-height:40px;">
+  	    <a href="{{ commit.html_url }}"
+  	       class="btn btn-success"
+  	       style="position:absolute;top:3px;right:3px;">
+  	       {{ commit.sha[:11] }}</a>
+  	    <div>{{ commit.commit.message }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+</body></html>

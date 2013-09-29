@@ -25,3 +25,16 @@
 .commit-info {
     margin-bottom: 5px;
 }
+
+.popover-static {
+    position: relative;
+    display: block;
+    max-width: 100%;
+    z-index: 0;
+}
+
+.loading-message {
+    text-align: center;
+    font-size: 2em;
+    padding: 1em 0;
+}
