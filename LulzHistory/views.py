@@ -26,7 +26,8 @@ from werkzeug.contrib.cache import SimpleCache
 
 from . import app
 from . import github
-from .const import PICS_REPO_NAME, PICS_BRANCH_NAME
+from .const import PICS_REPO_NAME
+from .github import HTTPError
 from .utils import cached as cached_decorator
 
 
@@ -123,6 +124,78 @@ def repo_index(owner):
     return render_template("repos-index.html", repos=repos, title=title)
 
 
+@cached(5*60, '/repos/{owner}/{repo}/commits?sha={branch}')
+def get_commits(owner, repo, branch):
+    url = '/repos/{owner}/{repo}/commits'.format(
+        owner=owner, repo=repo)
+
+    ## todo: we need to paginate, as commits can be quite a lot..
+    ## (right now we're only showing 100 commits..)
+    params = {'per_page': 100}
+
+    if branch is not None:
+        params['sha'] = branch
+
+    return github.request('GET', url, params=params).json()
+
+@cached(5*60, '/repos/{owner}/{repo}/branches')
+def list_branches(owner, repo):
+    url = '/repos/{owner}/{repo}/branches'.format(owner=owner, repo=repo)
+    return list(request_all(url))
+
+## todo: we should look for pics in the committer's repo
+## named "lulz-pics", master branch, all subfolders..
+
+# @cached(5*60, '/repos/{owner}/{repo}/contents?ref=lulz-pics')
+# def get_lulz_pics(owner, repo):
+#     url = '/repos/{owner}/{repo}/contents?ref=lulz-pics'\
+#           ''.format(owner=owner, repo=repo)
+#     return list(request_all(url))
+
+@cached(10*60, 'repo_master_branch:{owner}/{repo}')
+def get_repo_default_branch(owner, repo):
+    return 'master'
+    # resp = github.request('GET', '/repos/{owner}/{repo}'\
+    #                       ''.format(owner=owner, repo=repo))
+    # return resp.json()['master_branch']
+
+
+@cached(5*60, 'repo_pics:{owner}/{repo}')
+def get_repo_pics(owner, repo):
+    """
+    Scan a repository and find all the pictures in sub-directories.
+    Returns a dictionary with ``{'commit_sha': 'picture_url'}``
+    """
+    branch = get_repo_default_branch(owner=owner, repo=repo)
+    found = {}
+
+    def scan_subtree(url):
+        resp = github.request('GET', url)
+        for item in resp.json():
+            if item['type'] == 'dir':
+                scan_subtree(item['url'])
+            elif item['type'] == 'file':
+                ## Is this a suitable picture?
+                if img_file_re.match(item['name']):
+                    sha = item['name'].split('.', 1)[0]
+                    file_url = '{base}/{owner}/{repo}/{branch}/{path}'\
+                               ''.format(
+                                   base='https://raw.github.com',
+                                   owner=owner,
+                                   repo=repo,
+                                   branch=branch,
+                                   path=item['path'])
+                    found[sha] = file_url
+    try:
+        scan_subtree('/repos/{owner}/{repo}/contents'
+                     ''.format(owner=owner, repo=repo))
+    except HTTPError:
+        pass  # Will return stuff found so far
+        ## todo: should we raise exceptions in case of failure?
+
+    return found
+
+
 @app.route('/repo/<owner>/<repo>/')
 @app.route('/repo/<owner>/<repo>/<branch>/')
 def lulz_history(owner=None, repo=None, branch=None):
@@ -130,84 +203,28 @@ def lulz_history(owner=None, repo=None, branch=None):
     Show the lulz'd history for a given repository/branch
     """
 
-    @cached(5*60, '/repos/{owner}/{repo}/commits?sha={branch}')
-    def get_commits(owner, repo, branch):
-        url = '/repos/{owner}/{repo}/commits'.format(
-            owner=owner, repo=repo)
-
-        ## todo: we need to paginate, as commits can be quite a lot..
-        ## (right now we're only showing 100 commits..)
-        params = {'per_page': 100}
-
-        if branch is not None:
-            params['sha'] = branch
-
-        return github.request('GET', url, params=params).json()
-
-    @cached(5*60, '/repos/{owner}/{repo}/branches')
-    def list_branches(owner, repo):
-        url = '/repos/{owner}/{repo}/branches'.format(owner=owner, repo=repo)
-        return list(request_all(url))
-
-    ## todo: we should look for pics in the committer's repo
-    ## named "lulz-pics", master branch, all subfolders..
-
-    @cached(5*60, '/repos/{owner}/{repo}/contents?ref=lulz-pics')
-    def get_lulz_pics(owner, repo):
-        url = '/repos/{owner}/{repo}/contents?ref=lulz-pics'\
-              ''.format(owner=owner, repo=repo)
-        return list(request_all(url))
-
-    @cached(5*60, 'repo_pics:{owner}/{repo}')
-    def get_repo_pics(owner, repo):
-        """
-        Scan a repository and find all the pictures in sub-directories.
-        Returns a dictionary with ``{'commit_sha': 'picture_url'}``.
-        """
-        found = {}
-
-        def scan_subtree(url):
-            resp = github.request('GET', url)
-            for item in resp:
-                if item['type'] == 'dir':
-                    pass
-                elif item['type'] == 'file':
-                    ## If this is a suitable picture, convert its url:
-                    ## https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch} # NOQA
-                    ## to the raw url:
-                    # https://raw.github.com/{owner}/{repo}/{branch}/{path} # NOQA
-                    if img_file_re.match(item['name']):
-                        pass
-                    pass
-            pass
-        url = '/repos/{owner}/{repo}/contents'\
-              ''.format(owner=owner, repo=repo)
-        return list(request_all(url))
-
-    ## We also need to build a list of pictures for all the contributors.
-    ## Of course we want to cache this, as it might be quite time-consuming..
-
     commits = get_commits(owner=owner, repo=repo, branch=branch)
-    authors = set(c['author']['login'] for c in commits)
-    ## todo: for each author, find the PICS_REPO_NAME, if any
+    authors = set(c['author']['login'] for c in commits if c['author'])
+    branches = list_branches(owner=owner, repo=repo)
+    all_pics = {}
 
-    # branches = list_branches(owner=owner, repo=repo)
-    lulz_pics = get_lulz_pics(owner=owner, repo=repo)
+    for author in authors:
+        all_pics[author] = get_repo_pics(
+            owner=author,
+            repo=PICS_REPO_NAME)
 
-    lulz_pics_dict = {}
-    for pic in lulz_pics:
-        if pic['type'] == 'file':
-            #lulz_pics_dict[pic['name']] = pic['html_url']
-            lulz_pics_dict[pic['name']] = \
-                "https://raw.github.com/{owner}/{repo}/lulz-pics/{pic}".format(
-                    owner=owner, repo=repo, pic=pic['name'])
+    def find_pic(pics, commit):
+        for key, val in pics.iteritems():
+            if commit.startswith(key):
+                return val
 
     for commit in commits:
-        sha_short = commit['sha'][:11]
-        pic_name = '{}.jpg'.format(sha_short)
-        if pic_name in lulz_pics_dict:
-            commit['pic'] = lulz_pics_dict[pic_name]
+        pic = find_pic(all_pics[commit['author']['login']], commit['sha'])
+
+        if pic is not None:
+            commit['pic'] = pic
             commit['is_lulz'] = True
+
         else:
             commit['pic'] = commit['author']['avatar_url']
             commit['is_lulz'] = False
@@ -215,5 +232,6 @@ def lulz_history(owner=None, repo=None, branch=None):
     return render_template(
         'lulz-history.html',
         commits=commits,
-        repo_name="{}/{}".format(owner, repo),
-        current_branch=branch)
+        repo_name="{0}/{1}".format(owner, repo),
+        current_branch=branch,
+        branches=branches)
